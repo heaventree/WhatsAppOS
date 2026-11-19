@@ -1,0 +1,36 @@
+# Reviewed false positives from the Rafter scan of 2026-11-19 (commit 29c240f).
+# Every entry carries its reason. Real findings (hono, @hono/node-server) were fixed, not suppressed.
+ignore:
+  - paths: ["src/database/**", "src/modules/infra/infra-data.service.ts", "src/modules/search/providers/builtin-fts.provider.ts"]
+    rules: ["R-5651E"]
+    reason: "Interpolated SQL is internal constants only (table, schema and index names, numeric timeouts); request values use bind parameters."
+  - paths: ["src/core/plugins/plugin-package-scanner.ts", "src/modules/infra/infra-storage.controller.ts", "src/modules/plugins/plugins.service.ts", "scripts/patch-wwebjs-201832.js"]
+    rules: ["R-49217"]
+    reason: "Paths come from readdir of our own directories, not archive entries; no zip extraction here."
+  - paths: ["src/modules/message/pending-message-reaper.service.ts"]
+    rules: ["R-C5D36"]
+    reason: "TypeORM find on SQL (Postgres/SQLite) with a server-built Date cutoff; not a NoSQL operator query."
+  - paths: ["src/modules/session/session-proxy.interceptor.ts"]
+    rules: ["R-81594"]
+    reason: "Only an allowlist of headers from our own owner node is relayed; Node rejects CR/LF in header values."
+  - paths: ["Dockerfile"]
+    rules: ["R-12D07", "R-92D0F"]
+    reason: "Entrypoint starts as root only to chown the data volume then drops to the openwa user via gosu; build context is filtered by .dockerignore (checked in CI)."
+  - paths: ["src/common/security/proxy-aware-throttler.guard.ts"]
+    rules: ["R-56BBC"]
+    reason: "X-Forwarded-For is honoured only for peers listed in TRUSTED_PROXIES; used for rate limiting, not authorization."
+  - paths: ["src/modules/queue/processors/webhook.processor.ts"]
+    rules: ["R-310C9"]
+    reason: "Math.random only adds retry-delay jitter; not a security token."
+  - paths: ["src/configure-app.ts"]
+    rules: ["R-42D05"]
+    reason: "qs blocks __proto__ by default; extended form parsing is needed for nested form-encoded webhooks."
+  - paths: ["src/modules/infra/config-sections.ts"]
+    rules: ["R-39CF4"]
+    reason: "Keys are fixed internal config names, not user-supplied paths."
+  - paths: ["dashboard/src/pages/Plugins.tsx"]
+    rules: ["R-FCD9E"]
+    reason: "Target is a sandboxed iframe with an opaque origin, so '*' is the only possible targetOrigin; sender is already checked via e.source."
+  - paths: ["sdk/javascript/scripts/smoke.mjs"]
+    rules: ["R-6FBD5", "R-B43E7", "R-41CFB"]
+    reason: "Local SDK smoke-test script: local import, not a browser-facing response, dummy credential."
