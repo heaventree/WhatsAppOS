@@ -34,3 +34,30 @@ ignore:
   - paths: ["sdk/javascript/scripts/smoke.mjs"]
     rules: ["R-6FBD5", "R-B43E7", "R-41CFB"]
     reason: "Local SDK smoke-test script: local import, not a browser-facing response, dummy credential."
+  - paths: ["dashboard/src/utils/shortenLabel.ts", "scripts/**", "src/common/security/ssrf-guard.ts", "src/common/utils/ip.ts", "src/engine/adapters/wwebjs-running-build.ts"]
+    rules: ["R-EFEEF", "R-438C2"]
+    reason: "Checked each regex: quantified groups are delimited by literals (-, ., /, quotes) so they are linear, with no overlapping alternatives; inputs are version strings, IPs or dev-script text."
+  - paths: ["src/app.module.ts", "src/database/data-source-main.ts"]
+    rules: ["R-CA084"]
+    reason: "__dirname/cwd joined with fixed literal file names at module load; no request input."
+  - paths: ["src/core/plugins/plugin-lifecycle.ts", "src/core/plugins/sandbox/worker-bootstrap.ts", "src/core/plugins/sandbox/worker-thread-channel.ts", "src/engine/adapters/engine-patch-status.ts"]
+    rules: ["R-3ED6B", "R-371E3", "R-4D665"]
+    reason: "Loads admin-installed plugin entry points by design; paths come from the scanned plugin manifest in the plugins directory inside the worker sandbox, not request input."
+  - paths: ["src/modules/session/dto/create-session.dto.ts", "src/modules/session/dto/session-proxy.dto.ts"]
+    rules: ["R-24684"]
+    reason: "Validation/example text for the outbound proxy URL option; proxy credentials are an intended feature, redacted on read."
+  - paths: ["scripts/patch-wwebjs-201832.js"]
+    rules: ["R-A58C6"]
+    reason: "execFileSync (no shell) with a patch file path the script builds itself; not user input."
+  - paths: ["src/engine/adapters/baileys-lifecycle.ts"]
+    rules: ["R-70266"]
+    reason: "Connects to WhatsApp's fixed endpoints configured in the engine; host is not request-controlled."
+  - paths: ["src/modules/auth/**", "src/modules/profile/**", "src/modules/settings/**"]
+    rules: ["R-67010"]
+    reason: "Authentication is enforced globally by the APP_GUARD registered in AuthModule; controllers use role decorators on top."
+  - paths: ["sdk/**", "src/common/workflow-lines.ts", "openapi.json"]
+    rules: ["R-35E77", "R-40E40", "R-E2B38", "R-0FF70", "R-0AB4A", "R-35B5D", "R-4E092", "R-D2759", "R-FC357"]
+    reason: "Optional client SDKs (PHP/Go/Java/Python/JS) and the OpenAPI spec are not deployed here; the === hits are not secret comparisons."
+  - paths: ["dashboard/src/pages/Plugins.tsx", "dashboard/src/test-helpers/jsdom.ts", ".github/workflows/ci.yml"]
+    rules: ["R-49192", "R-8492D", "R-924F1"]
+    reason: "DOMParser result is only read, never inserted as HTML; the others are a test helper and a CI timeout setting."
