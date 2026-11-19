@@ -1,0 +1,86 @@
+# Heaventree OpenWA - Dokploy Compose app (project: AGENT TOOLS)
+# Paste into Dokploy > Compose > Raw, set env from .env.example, add domain -> service openwa-api, port 2785.
+# Dokploy injects Traefik labels + dokploy-network. The upstream docker-proxy (docker.sock) is intentionally omitted.
+services:
+  openwa-api:
+    image: ghcr.io/rmyndharis/openwa:0.30.3
+    restart: unless-stopped
+    stop_grace_period: 75s
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, KILL, SETGID, SETUID]
+    read_only: true
+    tmpfs: [/tmp]
+    pids_limit: 2048
+    mem_limit: 2g
+    expose: ['2785']
+    environment:
+      NODE_ENV: production
+      PORT: '2785'
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/.config
+      XDG_CACHE_HOME: /tmp/.cache
+      TZ: UTC
+      BASE_URL: https://${OPENWA_HOST}
+      DASHBOARD_URL: https://${OPENWA_HOST}
+      CORS_ORIGINS: https://${OPENWA_HOST}
+      DATABASE_TYPE: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: openwa
+      DATABASE_USERNAME: openwa
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_SYNCHRONIZE: 'false'
+      REDIS_ENABLED: 'true'
+      QUEUE_ENABLED: 'true'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      API_MASTER_KEY: ${API_MASTER_KEY}
+      API_KEY_PEPPER: ${API_KEY_PEPPER}
+      TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12
+      AUTO_START_SESSIONS: 'true'
+      SEND_PACING_ENABLED: 'true'
+      NODE_ID: openwa-1
+    volumes:
+      - openwa-data:/app/data
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:2785/api/health/ready']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openwa
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: openwa
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openwa -d openwa']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction', '--requirepass', '${REDIS_PASSWORD}']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  openwa-data:
+  postgres-data:
+  redis-data:
